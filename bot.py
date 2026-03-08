@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters import Command
 
 BOT_TOKEN = "8752155017:AAHoh1cieV0hgU7dndGJAWrCWXJ9fEJkXfE"
-ADMIN_IDS = [174415647]
+ADMIN_IDS = [174415647,713129783]
 
 MIDDLE_USERNAME = "@hostelman"
 SUPPORT_USERNAME = "@hostelman"
