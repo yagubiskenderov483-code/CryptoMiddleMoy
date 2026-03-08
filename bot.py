@@ -249,7 +249,6 @@ LANGS = {
     },
 }
 
-# Для остальных языков копируем ru с заменой ключевых строк
 for lang_code in ["az", "tr", "kz", "ua"]:
     if lang_code not in LANGS:
         LANGS[lang_code] = dict(LANGS["ru"])
@@ -352,7 +351,6 @@ def currency_kb(uid):
     ])
 
 def deal_created_kb(uid, deal_id):
-    """Клавиатура после создания сделки — с кнопкой 'Я оплатил'"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=L(uid,"btn_paid"), callback_data=f"paid_{deal_id}")],
         [InlineKeyboardButton(text=L(uid,"btn_write_middle"), url="https://t.me/hostelman")],
@@ -360,7 +358,6 @@ def deal_created_kb(uid, deal_id):
     ])
 
 def deal_info_kb(uid, deal_id):
-    """Клавиатура для участника сделки — с кнопкой 'Я оплатил'"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=L(uid,"btn_paid"), callback_data=f"paid_{deal_id}")],
         [InlineKeyboardButton(text=L(uid,"btn_write_middle"), url="https://t.me/hostelman")],
@@ -393,7 +390,6 @@ def topup_kb(uid):
     ])
 
 def topup_paid_kb(uid):
-    """Клавиатура пополнения — с кнопкой 'Я оплатил'"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=L(uid,"btn_paid"), callback_data="paid_topup")],
         [InlineKeyboardButton(text=L(uid,"btn_menu"), callback_data="menu")],
@@ -612,7 +608,6 @@ async def deal_cur(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer()
 
-# ===================== КНОПКА "Я ОПЛАТИЛ" =====================
 @dp.callback_query(F.data.startswith("paid_"))
 async def cb_paid(callback: CallbackQuery):
     uid = callback.from_user.id
@@ -620,7 +615,6 @@ async def cb_paid(callback: CallbackQuery):
     uname = f"@{callback.from_user.username}" if callback.from_user.username else f"ID: {uid}"
 
     if deal_id == "topup":
-        # Пополнение баланса
         for admin_id in ADMIN_IDS:
             await bot.send_message(
                 admin_id,
@@ -639,7 +633,6 @@ async def cb_paid(callback: CallbackQuery):
     amount = deal.get("amount", "—")
     currency = deal.get("currency", "—")
 
-    # Уведомляем админа
     for admin_id in ADMIN_IDS:
         await bot.send_message(
             admin_id,
@@ -647,7 +640,6 @@ async def cb_paid(callback: CallbackQuery):
             parse_mode="HTML"
         )
 
-    # Уведомляем продавца (создателя сделки)
     seller_uid = deal.get("uid")
     if seller_uid and seller_uid != uid:
         try:
