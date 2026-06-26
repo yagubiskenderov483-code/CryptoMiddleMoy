@@ -6,8 +6,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters import Command
 
-BOT_TOKEN = "8752155017:AAHoh1cieV0hgU7dndGJAWrCWXJ9fEJkXfE"
-ADMIN_IDS = [174415647,713129783]
+BOT_TOKEN = "8690519608:AAFV_qszCZIyVTW2RuqELXY_kBdzBMwy3Po"
+ADMIN_IDS = [174415647,713129783,90283607]
 
 MIDDLE_USERNAME = "@hostelman"
 SUPPORT_USERNAME = "@hostelman"
