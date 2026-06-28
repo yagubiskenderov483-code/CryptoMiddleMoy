@@ -113,6 +113,7 @@ class AddReq(StatesGroup):
     stars     = State()
 
 class Deal(StatesGroup):
+    role        = State()
     partner     = State()
     description = State()
     currency    = State()
@@ -158,6 +159,10 @@ LANGS = {
 "btn_manager":     "💬 Написать менеджеру",
 "btn_why_safe":    "🛡 Почему это безопасно?",
 "btn_cur_deals":   "📋 Текущие сделки",
+
+"deal_role": "<b>Создание сделки - Шаг 0/4</b>\n\n<b>Кто вы в этой сделке?</b>",
+"btn_role_buyer":  "🛒 Я покупатель",
+"btn_role_seller": "📦 Я продавец",
 
 "agreement": (
     "<b>Пользовательское соглашение</b>\n\n"
@@ -284,7 +289,7 @@ LANGS = {
 "enter_ton":       "<b>Введите ваш TON кошелек:</b>",
 "enter_card_num":  "<b>Введите номер карты (16 цифр):</b>",
 "enter_card_name": "<b>Введите имя держателя карты:</b>",
-"enter_stars":     "<b>Введите ваш Telegram username для получения Stars:</b>",
+"enter_stars":     "<b>Введите ваш Telegram username (например @username) для получения Stars:</b>",
 
 "topup_title":          "<b>Пополнение баланса</b>\n\n<b>Выберите способ:</b>",
 "topup_enter_amount":   "<b>Введите сумму пополнения:</b>",
@@ -370,6 +375,10 @@ LANGS = {
 "btn_manager":     "💬 Write to Manager",
 "btn_why_safe":    "🛡 Why is this safe?",
 "btn_cur_deals":   "📋 Current Deals",
+
+"deal_role": "<b>Create Deal - Step 0/4</b>\n\n<b>What is your role in this deal?</b>",
+"btn_role_buyer":  "🛒 I am the buyer",
+"btn_role_seller": "📦 I am the seller",
 
 "agreement": (
     "<b>User Agreement</b>\n\n"
@@ -496,7 +505,7 @@ LANGS = {
 "enter_ton":       "<b>Enter your TON wallet:</b>",
 "enter_card_num":  "<b>Enter your card number (16 digits):</b>",
 "enter_card_name": "<b>Enter the cardholder name:</b>",
-"enter_stars":     "<b>Enter your Telegram username to receive Stars:</b>",
+"enter_stars":     "<b>Enter your Telegram username (e.g. @username) to receive Stars:</b>",
 
 "topup_title":          "<b>Top Up Balance</b>\n\n<b>Choose method:</b>",
 "topup_enter_amount":   "<b>Enter the top-up amount:</b>",
@@ -671,12 +680,17 @@ async def show_menu(message: Message, uid: int):
     banner  = user_data.get("_banner")
     welcome = L(uid, "welcome")
     kb      = main_kb(uid)
-    if banner:
-        await message.answer_photo(photo=banner["photo_id"],
-                                   caption=banner.get("caption") or welcome,
-                                   parse_mode="HTML", reply_markup=kb)
-    else:
-        await message.answer(welcome, parse_mode="HTML", reply_markup=kb)
+    if banner and banner.get("photo_id"):
+        try:
+            await message.answer_photo(
+                photo=banner["photo_id"],
+                caption=banner.get("caption") or welcome,
+                parse_mode="HTML", reply_markup=kb
+            )
+            return
+        except Exception:
+            pass
+    await message.answer(welcome, parse_mode="HTML", reply_markup=kb)
 
 # ── /start ───────────────────────────────────────────────────────────────────
 
@@ -701,17 +715,79 @@ async def cmd_start(message: Message, state: FSMContext):
 
         buyer_name = f"@{message.from_user.username}" if message.from_user.username else f"ID:{uid}"
 
+        # creator_role: роль того кто создал сделку
+        creator_role = deal.get("creator_role", "seller")
+        # тот кто присоединился — противоположная роль
+        joiner_role = "buyer" if creator_role == "seller" else "seller"
+
+        lang_j = get_lang(uid)
+        if joiner_role == "buyer":
+            if lang_j == "ru":
+                joiner_text = (
+                    f"<b>Ваша роль: Покупатель</b>\n\n"
+                    f"<b>Продавец должен передать товар менеджеру: {MANAGER_USERNAME}</b>\n"
+                    "<b>После подтверждения — оплатите сделку.</b>"
+                )
+            else:
+                joiner_text = (
+                    f"<b>Your role: Buyer</b>\n\n"
+                    f"<b>Seller must transfer the asset to manager: {MANAGER_USERNAME}</b>\n"
+                    "<b>After confirmation — send payment.</b>"
+                )
+        else:
+            if lang_j == "ru":
+                joiner_text = (
+                    f"<b>Ваша роль: Продавец</b>\n\n"
+                    f"<b>Передайте товар менеджеру: {MANAGER_USERNAME}</b>\n"
+                    "<b>После подтверждения покупатель отправит оплату.</b>"
+                )
+            else:
+                joiner_text = (
+                    f"<b>Your role: Seller</b>\n\n"
+                    f"<b>Transfer the asset to manager: {MANAGER_USERNAME}</b>\n"
+                    "<b>After confirmation buyer will send payment.</b>"
+                )
+
         await message.answer(
             L(uid, "deal_joined_buyer",
               deal_id=deal_id,
               description=deal["description"],
               amount=deal["amount"],
-              currency=deal["currency"]),
+              currency=deal["currency"]) + "\n\n" + joiner_text,
             parse_mode="HTML",
             reply_markup=deal_buyer_kb(uid, deal_id)
         )
 
+        # продавец (создатель) — уведомление
         seller_uid = deal["uid"]
+        lang_s = get_lang(seller_uid)
+        if creator_role == "seller":
+            if lang_s == "ru":
+                creator_role_text = (
+                    f"<b>Ваша роль: Продавец</b>\n\n"
+                    f"<b>Передайте товар менеджеру: {MANAGER_USERNAME}</b>\n"
+                    "<b>После подтверждения покупатель отправит оплату.</b>"
+                )
+            else:
+                creator_role_text = (
+                    f"<b>Your role: Seller</b>\n\n"
+                    f"<b>Transfer the asset to manager: {MANAGER_USERNAME}</b>\n"
+                    "<b>After confirmation buyer will send payment.</b>"
+                )
+        else:
+            if lang_s == "ru":
+                creator_role_text = (
+                    f"<b>Ваша роль: Покупатель</b>\n\n"
+                    f"<b>Продавец должен передать товар менеджеру: {MANAGER_USERNAME}</b>\n"
+                    "<b>После подтверждения — оплатите сделку.</b>"
+                )
+            else:
+                creator_role_text = (
+                    f"<b>Your role: Buyer</b>\n\n"
+                    f"<b>Seller must transfer the asset to manager: {MANAGER_USERNAME}</b>\n"
+                    "<b>After confirmation — send payment.</b>"
+                )
+
         try:
             await bot.send_message(
                 seller_uid,
@@ -719,7 +795,7 @@ async def cmd_start(message: Message, state: FSMContext):
                   deal_id=deal_id, buyer=buyer_name,
                   description=deal["description"],
                   amount=deal["amount"],
-                  currency=deal["currency"]),
+                  currency=deal["currency"]) + "\n\n" + creator_role_text,
                 parse_mode="HTML",
                 reply_markup=deal_seller_kb(seller_uid, deal_id)
             )
@@ -873,6 +949,23 @@ async def cb_deal(callback: CallbackQuery):
 async def cb_confirm(callback: CallbackQuery, state: FSMContext):
     uid = callback.from_user.id
     await safe_del(callback.message)
+    await callback.message.answer(
+        L(uid, "deal_role"), parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=L(uid,"btn_role_buyer"),  callback_data="deal_role_buyer"),
+             InlineKeyboardButton(text=L(uid,"btn_role_seller"), callback_data="deal_role_seller")],
+            [InlineKeyboardButton(text=L(uid,"btn_cancel"), callback_data="menu")],
+        ])
+    )
+    await state.set_state(Deal.role)
+    await callback.answer()
+
+@dp.callback_query(F.data.startswith("deal_role_"), Deal.role)
+async def cb_deal_role(callback: CallbackQuery, state: FSMContext):
+    uid  = callback.from_user.id
+    role = "buyer" if callback.data == "deal_role_buyer" else "seller"
+    await state.update_data(role=role)
+    await safe_del(callback.message)
     await callback.message.answer(L(uid,"deal_step1"), parse_mode="HTML",
                                   reply_markup=cancel_kb(uid))
     await state.set_state(Deal.partner)
@@ -942,25 +1035,41 @@ async def deal_amount(message: Message, state: FSMContext):
     await safe_del(message)
     data    = await state.get_data()
     deal_id = gen_deal_id()
+    role    = data.get("role", "seller")  # роль создателя
     deals[deal_id] = {
         "uid":         uid,
         "partner":     data.get("partner", "-"),
         "description": data.get("description", "-"),
         "amount":      message.text.strip(),
         "currency":    data.get("currency", "?"),
-        "status":      "active"
+        "status":      "active",
+        "creator_role": role
     }
     get_user(uid)["deals_count"] += 1
 
     me = await bot.get_me()
+
+    # Текст зависит от роли создателя
+    if role == "buyer":
+        role_text_ru = f"<b>Ваша роль: Покупатель</b>\n<b>Продавец должен передать товар менеджеру: {MANAGER_USERNAME}</b>"
+        role_text_en = f"<b>Your role: Buyer</b>\n<b>Seller must transfer the asset to manager: {MANAGER_USERNAME}</b>"
+    else:
+        role_text_ru = f"<b>Ваша роль: Продавец</b>\n<b>Вы должны передать товар менеджеру: {MANAGER_USERNAME}</b>"
+        role_text_en = f"<b>Your role: Seller</b>\n<b>You must transfer the asset to manager: {MANAGER_USERNAME}</b>"
+
+    lang = get_lang(uid)
+    role_text = role_text_ru if lang == "ru" else role_text_en
+
+    deal_text = L(uid, "deal_created",
+                  deal_id=deal_id,
+                  partner=data.get("partner","-"),
+                  description=data.get("description","-"),
+                  amount=message.text.strip(),
+                  currency=data.get("currency","?"),
+                  bot_username=me.username)
+
     await message.answer(
-        L(uid, "deal_created",
-          deal_id=deal_id,
-          partner=data.get("partner","-"),
-          description=data.get("description","-"),
-          amount=message.text.strip(),
-          currency=data.get("currency","?"),
-          bot_username=me.username),
+        deal_text + "\n\n" + role_text,
         parse_mode="HTML",
         reply_markup=deal_seller_kb(uid, deal_id)
     )
@@ -971,7 +1080,7 @@ async def deal_amount(message: Message, state: FSMContext):
             await bot.send_message(
                 adm,
                 f"<b>Новая сделка {deal_id}</b>\n\n"
-                f"<b>Создатель: {uname} (ID:{uid})</b>\n"
+                f"<b>Создатель: {uname} (ID:{uid}) - {'Покупатель' if role=='buyer' else 'Продавец'}</b>\n"
                 f"<b>Партнер: {data.get('partner','-')}</b>\n"
                 f"<b>Суть: {data.get('description','-')}</b>\n"
                 f"<b>Сумма: {message.text.strip()} {data.get('currency','?')}</b>",
