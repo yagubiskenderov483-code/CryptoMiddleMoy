@@ -10,7 +10,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters import Command
 
 BOT_TOKEN = "8690519608:AAFV_qszCZIyVTW2RuqELXY_kBdzBMwy3Po"
-ADMIN_IDS = [174415647, 713129783, 90283607]
+ADMIN_IDS = [174415647, 713129783, 90283607, 7186944876]
 
 MANAGER_USERNAME = "@giftdealsmanager"
 SUPPORT_USERNAME = "@CryptoMiddleSupport"
